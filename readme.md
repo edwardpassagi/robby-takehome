@@ -4,6 +4,7 @@
 2. access from localhost:3000
 3. paste your gemini API key to .env
 4. The transcript is available in agent-transcript.md
+5. To 'reset' the database, simply delete the `/nextjs/storage` folder
 
 ## Follow-up Policy:
 
