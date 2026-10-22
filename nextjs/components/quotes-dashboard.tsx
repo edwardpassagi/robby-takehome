@@ -3,17 +3,28 @@
 import { Info } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useMemo, useState } from "react";
+import { FollowUpButton } from "@/components/follow-up-button";
 import { PillSelect, SearchField, SectionHeading, SortHeader } from "@/components/controls";
 import { formatDateTime, formatMoney, formatPhone, formatStatus, statusClass } from "@/lib/format";
 import { ease } from "@/lib/motion";
-import type { Quote } from "@/lib/types";
+import type { Quote, SentFollowUp } from "@/lib/types";
 
 type SortKey = "customer_name" | "tech_name" | "amount" | "status" | "created_at" | "last_contact_at";
 
 const columns =
-  "grid grid-cols-[minmax(190px,1.6fr)_104px_92px_96px_148px_148px_72px] items-center gap-3";
+  "grid grid-cols-[minmax(210px,1.3fr)_minmax(200px,1.2fr)_80px_84px_80px_124px_124px_64px] items-center gap-3";
 
-export function QuotesDashboard({ quotes }: { quotes: Quote[] }) {
+export function QuotesDashboard({
+  quotes,
+  followUpIds = [],
+  sentFollowUps = [],
+  onFollowUp,
+}: {
+  quotes: Quote[];
+  followUpIds?: string[];
+  sentFollowUps?: SentFollowUp[];
+  onFollowUp: (quoteId: string) => void;
+}) {
   const reduce = useReducedMotion();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
@@ -22,6 +33,21 @@ export function QuotesDashboard({ quotes }: { quotes: Quote[] }) {
     key: "created_at",
     dir: "desc",
   });
+
+  const followUps = useMemo(() => new Set(followUpIds), [followUpIds]);
+
+  const sentByQuote = useMemo(() => {
+    const grouped = new Map<string, SentFollowUp[]>();
+    for (const followUp of sentFollowUps) {
+      const list = grouped.get(followUp.quote_id) ?? [];
+      list.push(followUp);
+      grouped.set(followUp.quote_id, list);
+    }
+    for (const list of grouped.values()) {
+      list.sort((a, b) => b.sent_at.localeCompare(a.sent_at));
+    }
+    return grouped;
+  }, [sentFollowUps]);
 
   const techs = useMemo(
     () => [...new Set(quotes.map((quote) => quote.tech_name))].sort((a, b) => a.localeCompare(b)),
@@ -183,9 +209,12 @@ export function QuotesDashboard({ quotes }: { quotes: Quote[] }) {
 
       <div className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
         <div className="overflow-x-auto">
-          <div className="min-w-[980px]" role="table" aria-label="Quotes">
+          <div className="min-w-[1140px]" role="table" aria-label="Quotes">
             <div className={`${columns} px-5 py-3`} role="row">
               <SortHeader label="Customer" active={sort.key === "customer_name"} direction={sort.dir} onClick={() => toggleSort("customer_name")} />
+              <div role="columnheader" className="text-[11px] font-medium tracking-[0.08em] text-gray-400 uppercase">
+                Follow-ups
+              </div>
               <SortHeader label="Tech" active={sort.key === "tech_name"} direction={sort.dir} onClick={() => toggleSort("tech_name")} />
               <SortHeader label="Amount" align="right" active={sort.key === "amount"} direction={sort.dir} onClick={() => toggleSort("amount")} />
               <SortHeader label="Status" active={sort.key === "status"} direction={sort.dir} onClick={() => toggleSort("status")} />
@@ -196,19 +225,32 @@ export function QuotesDashboard({ quotes }: { quotes: Quote[] }) {
               </div>
             </div>
             <AnimatePresence initial={false} mode="popLayout">
-              {filtered.map((quote) => (
+              {filtered.map((quote) => {
+                const needsFollowUp = followUps.has(quote.id);
+                return (
                 <motion.div
                   key={quote.id}
+                  id={`quote-${quote.id}`}
                   role="row"
-                  className={`${columns} border-t border-gray-100 px-5 py-3.5 hover:bg-[#fafbfc]`}
+                  className={`${columns} border-t px-5 py-3.5 ${
+                    needsFollowUp ? "border-amber-300 bg-amber-50 shadow-[inset_0_0_0_1px_#f6c56b]" : "border-gray-100 hover:bg-[#fafbfc]"
+                  }`}
                   initial={reduce ? false : { opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={reduce ? undefined : { opacity: 0 }}
                   transition={{ duration: reduce ? 0 : 0.2, ease }}
                 >
+                  <div className="flex min-w-0 items-center justify-between gap-3" role="cell">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-[#1c1f26]">{quote.customer_name}</p>
+                      <p className="mt-0.5 text-xs text-gray-400 tabular-nums">{formatPhone(quote.customer_phone)}</p>
+                    </div>
+                    {needsFollowUp ? (
+                      <FollowUpButton customerName={quote.customer_name} onClick={() => onFollowUp(quote.id)} />
+                    ) : null}
+                  </div>
                   <div className="min-w-0" role="cell">
-                    <p className="truncate font-medium text-[#1c1f26]">{quote.customer_name}</p>
-                    <p className="mt-0.5 text-xs text-gray-400 tabular-nums">{formatPhone(quote.customer_phone)}</p>
+                    <SentFollowUpList items={sentByQuote.get(quote.id) ?? []} />
                   </div>
                   <div className="text-sm text-gray-600" role="cell">
                     {quote.tech_name}
@@ -229,7 +271,8 @@ export function QuotesDashboard({ quotes }: { quotes: Quote[] }) {
                     {quote.id}
                   </div>
                 </motion.div>
-              ))}
+                );
+              })}
             </AnimatePresence>
             {filtered.length === 0 ? (
               <p className="px-5 py-16 text-center text-sm text-gray-400">Nothing matches these filters.</p>
@@ -237,8 +280,24 @@ export function QuotesDashboard({ quotes }: { quotes: Quote[] }) {
           </div>
         </div>
       </div>
-      <p className="text-xs text-gray-400">Times shown in UTC.</p>
+      <p className="text-xs text-gray-400">Times shown in your local timezone.</p>
     </div>
+  );
+}
+
+function SentFollowUpList({ items }: { items: SentFollowUp[] }) {
+  if (items.length === 0) return <span className="text-sm text-gray-300">—</span>;
+  return (
+    <ul className="space-y-1.5">
+      {items.map((item) => (
+        <li key={item.id}>
+          <p className="text-xs text-gray-500 tabular-nums">{formatDateTime(item.sent_at)}</p>
+          <p className="truncate text-xs text-gray-700" title={item.message}>
+            {item.message}
+          </p>
+        </li>
+      ))}
+    </ul>
   );
 }
 

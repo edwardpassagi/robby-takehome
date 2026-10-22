@@ -4,9 +4,11 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test": "node --experimental-strip-types --test lib/quotes/*.test.ts"
   },
   "dependencies": {
+    "@google/genai": "^2.30.0",
     "lucide-react": "^0.544.0",
     "motion": "^12.23.22",
     "next": "^15.5.4",

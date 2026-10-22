@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Suspense } from "react";
 import { Sidebar } from "@/components/sidebar";
 import { TopBar } from "@/components/top-bar";
-import { latestEventTimestamp } from "@/app/events/action";
 import "./globals.css";
 
 const inter = Inter({
@@ -21,20 +21,20 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const asOf = await latestEventTimestamp();
-
   return (
     <html lang="en">
       <body className={`${inter.className} antialiased`}>
         <div className="flex min-h-screen">
-          <Sidebar />
+          <Suspense fallback={<div className="hidden w-[232px] shrink-0 border-r border-gray-200 bg-white md:block" />}>
+            <Sidebar />
+          </Suspense>
           <div className="flex min-w-0 flex-1 flex-col">
-            <TopBar asOf={asOf} />
+            <TopBar />
             <main className="min-w-0 flex-1 px-5 pb-12 md:px-8">{children}</main>
           </div>
         </div>

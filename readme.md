@@ -1,28 +1,29 @@
-How to run:
+# How to run:
 
 1. from nextjs/: npm install, then npm run dev
 2. access from localhost:3000
+3. paste your gemini API key to .env
+4. The transcript is available in agent-transcript.md
 
-high-level approach:
+## Follow-up Policy:
 
-1. In "Quote", add a special section for "follow-ups", which shows the list of items that needs to be followed-up. This should follow both the follow-up policy and guardrails.
-2. basic dashboard showing all events, with options to filter by quote types and channel
-3.
+1. Customer viewed the quote in the last 7 days, and nobody has responded since. This is important in case the follow-up got buried under other messages.
+2. Big quote (over $3,000) with no contact for 3 days. This is important since these are transactions that brings the biggest revenue. Customers can decide whether they want to follow-up on smaller amount, but at a certain point (if a quote is very small), it might not be worth the effort to follow-up at all.
+3. This quote was already followed up previously more than 5 days ago, and it has been followed up fewer than 3 times. Multiple follow-ups may sometimes be warranted, especially for larger transactions. We shouldn't rule out a follow-up simply because they had ben previously followed-up before, but we also need to not overdo it.
+4. If none of these are true, then we don't show the follow-up button altogether. This is to prevent technicians accidentally sending a follow-up when they shouldn't have.
 
-Guardrails: 1. never message the same customer twice within a cooldown window (e.g. 14 days) 2. Never message about an accepted or dismissed quote 3. avoid double-send during a rerun / retry failed send.
+## What changes when this runs for a parent company with 50 shops, each with their own quotes, phone numbers, and opinions about what "follow up" means?
 
-Follow-up Policy:
+When this runs for a parent company, we can simply add another property for the store identifier (e.g. `store_id`) for each relevant tables (quotes, events, etc.) which can then be used to identify what needs to be shown on the dashboard. The user can select which store they want to see, or have the options to see all the data from every store.
 
-1. Customer viewed the quote recently but nobody has responded
-2. Big quote wih no contact in N days
-3.
+Follow-up can be modified so that it's no longer hard-coded, but rather be stored in the database as a user-defined logic. We can create an interface that allows the user to modify VIEW_WINDOW, QUIET_WINDOW, REPEAT_GAP, MAX_FOLLOW_UPS, LARGE_QUOTE_AMOUNT, etc. If they need more granularity, we can develop a suite for the follow-up engine that allows the user to create custom rules (if-else logic).
 
-Todo later:
+## What I'd build next with another day:
 
-1. follow-up policy calculation should be done in a daily batch-job, instead of whenever the user access the "Quotes" page.
-
-How to access:
-
-1. clone the git repo
-2. cd nextjs && npm install
-3. npm run dev, then access localhost:3000
+1. Crate a batch job that runs daily during downtime (e.g. 1AM) to reduce loading time. This can be used to:
+   1. Calculate the quotes that needs to be followed-up
+   2. Generate follow-up drafts for each of these quotes
+      This is especially important as the list of quotes grows larger.
+2. Optimize the view for smaller screens (e.g. iPad)
+3. Allow customization for the AI-drafted response
+4. Allow support for parent company viewing multiple stores

@@ -1,8 +1,11 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { PillSelect, SearchField, SectionHeading, SortHeader } from "@/components/controls";
+import { DateFilter } from "@/components/date-filter";
+import { DateFilterEmpty } from "@/components/date-filter-empty";
+import { localDayKey } from "@/lib/dates";
 import { EVENT_TYPES, eventTypeClass, formatChannel, formatDay, formatEventType, formatTime } from "@/lib/format";
 import { ease } from "@/lib/motion";
 import type { Quote, QuoteEvent } from "@/lib/types";
@@ -13,7 +16,7 @@ const columns = "grid grid-cols-[88px_168px_84px_minmax(160px,1fr)_88px] items-c
 
 type TaggedEvent = QuoteEvent & { rowKey: string; customer: string };
 
-export function EventsDashboard({ events, quotes }: { events: QuoteEvent[]; quotes: Quote[] }) {
+export function EventsDashboard({ events, quotes, day = null }: { events: QuoteEvent[]; quotes: Quote[]; day?: string | null }) {
   const reduce = useReducedMotion();
   const [ready, setReady] = useState(false);
   const [query, setQuery] = useState("");
@@ -186,6 +189,9 @@ export function EventsDashboard({ events, quotes }: { events: QuoteEvent[]; quot
       <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
         <SectionHeading title="Events" detail={detail} />
         <div className="flex flex-wrap items-center gap-2">
+          <Suspense fallback={null}>
+            <DateFilter />
+          </Suspense>
           <PillSelect
             label="Event type"
             value={type}
@@ -236,9 +242,9 @@ export function EventsDashboard({ events, quotes }: { events: QuoteEvent[]; quot
               transition={{ duration: reduce ? 0 : 0.22, ease }}
             >
               {filtered.map((event, index) => {
-                const day = event.timestamp.slice(0, 10);
+                const day = localDayKey(event.timestamp);
                 const previous = filtered[index - 1];
-                const showDay = sort.key === "timestamp" && (!previous || previous.timestamp.slice(0, 10) !== day);
+                const showDay = sort.key === "timestamp" && (!previous || localDayKey(previous.timestamp) !== day);
                 return (
                   <div key={event.rowKey} className="border-t border-gray-100" role="row">
                     {showDay ? (
@@ -276,13 +282,17 @@ export function EventsDashboard({ events, quotes }: { events: QuoteEvent[]; quot
                 );
               })}
               {filtered.length === 0 ? (
-                <p className="px-5 py-16 text-center text-sm text-gray-400">Nothing matches these filters.</p>
+                events.length === 0 && day ? (
+                  <DateFilterEmpty noun="events" day={day} />
+                ) : (
+                  <p className="px-5 py-16 text-center text-sm text-gray-400">Nothing matches these filters.</p>
+                )
               ) : null}
             </motion.div>
           </div>
         </div>
       </div>
-      <p className="text-xs text-gray-400">Newest first. Times shown in UTC. Repeated rows are duplicate webhook deliveries.</p>
+      <p className="text-xs text-gray-400">Newest first. Repeated rows are duplicate webhook deliveries.</p>
     </div>
   );
 }

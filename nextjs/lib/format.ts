@@ -1,14 +1,14 @@
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-function utcParts(iso: string) {
+function localParts(iso: string) {
   const date = new Date(iso);
-  const hours24 = date.getUTCHours();
+  const hours24 = date.getHours();
   return {
-    month: MONTHS[date.getUTCMonth()],
-    day: date.getUTCDate(),
-    year: date.getUTCFullYear(),
+    month: MONTHS[date.getMonth()],
+    day: date.getDate(),
+    year: date.getFullYear(),
     hours: hours24 % 12 || 12,
-    minutes: String(date.getUTCMinutes()).padStart(2, "0"),
+    minutes: String(date.getMinutes()).padStart(2, "0"),
     suffix: hours24 >= 12 ? "PM" : "AM",
   };
 }
@@ -46,23 +46,28 @@ export function formatPhone(phone: string): string {
 
 export function formatDateTime(iso: string | null): string {
   if (!iso) return "—";
-  const parts = utcParts(iso);
+  const parts = localParts(iso);
   return `${parts.month} ${parts.day}, ${parts.hours}:${parts.minutes} ${parts.suffix}`;
 }
 
 export function formatDay(iso: string): string {
-  const parts = utcParts(iso);
+  const parts = localParts(iso);
   return `${parts.month} ${parts.day}`;
 }
 
 export function formatTime(iso: string): string {
-  const parts = utcParts(iso);
+  const parts = localParts(iso);
   return `${parts.hours}:${parts.minutes} ${parts.suffix}`;
 }
 
 export function formatLongDate(iso: string): string {
-  const parts = utcParts(iso);
+  const parts = localParts(iso);
   return `${parts.month} ${parts.day}, ${parts.year}`;
+}
+
+export function formatDayKey(day: string): string {
+  const [year, month, date] = day.split("-").map(Number);
+  return `${MONTHS[month - 1] ?? ""} ${date}, ${year}`;
 }
 
 export function formatEventType(type: string): string {

@@ -3,13 +3,14 @@ import "server-only";
 import fs from "fs";
 import path from "path";
 import type { QuoteStore } from "@/lib/quote-store";
-import type { Quote, QuoteEvent } from "@/lib/types";
+import type { Quote, QuoteEvent, SentFollowUp } from "@/lib/types";
 
 // seed/ stays at the repo root. storage/ is the Next app's local database.
 const repoRoot = path.resolve(process.cwd(), "..");
 const storageDir = path.join(process.cwd(), "storage");
 const quotesPath = path.join(storageDir, "quotes.json");
 const eventsPath = path.join(storageDir, "events.json");
+const followUpsPath = path.join(storageDir, "follow-ups.json");
 const seedQuotesPath = path.join(repoRoot, "seed", "quotes.json");
 const seedEventsPath = path.join(repoRoot, "seed", "events.jsonl");
 
@@ -32,6 +33,10 @@ function ensureStorage() {
     }
     const events = parseEventsJsonl(fs.readFileSync(seedEventsPath, "utf8"));
     writeAtomic(eventsPath, JSON.stringify(events, null, 2) + "\n");
+  }
+
+  if (!fs.existsSync(followUpsPath)) {
+    writeAtomic(followUpsPath, "[]\n");
   }
 }
 
@@ -85,6 +90,14 @@ const fileQuoteStore: QuoteStore = {
   },
   writeEvents(events) {
     writeJson(eventsPath, events);
+  },
+  readSentFollowUps() {
+    ensureStorage();
+    return readJsonArray<SentFollowUp>(followUpsPath, "storage/follow-ups.json");
+  },
+  appendSentFollowUp(followUp) {
+    const current = this.readSentFollowUps();
+    writeJson(followUpsPath, [...current, followUp]);
   },
 };
 

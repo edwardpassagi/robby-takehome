@@ -6,3 +6,4 @@ out/
 
 # Local database. Delete this folder to reset from seed/.
 storage/
+.env.local
